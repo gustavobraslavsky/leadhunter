@@ -1,7 +1,6 @@
 node_modules
 npm-debug.log
 data/
-*.json
 .vercel/
 render.yaml
 meta-ads.md
