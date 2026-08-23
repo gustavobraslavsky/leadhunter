@@ -98,18 +98,31 @@ async function scrapeGoogleMaps(query, maxResults = 20) {
     const puppeteer = require('puppeteer');
     
     // Detect environment: Docker/Linux vs Windows
-    const isDocker = process.env.DOCKER || process.platform === 'linux';
+    const isLinux = process.platform === 'linux';
     const launchOptions = {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        headless: 'new',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--single-process'
+        ]
     };
     
-    // Only set executablePath on Windows (Docker uses bundled Chromium)
-    if (!isDocker && process.platform === 'win32') {
+    // On Windows, use local Chrome
+    if (!isLinux && process.platform === 'win32') {
         launchOptions.executablePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
     }
     
-    const browser = await puppeteer.launch(launchOptions);
+    let browser;
+    try {
+        browser = await puppeteer.launch(launchOptions);
+    } catch (err) {
+        console.error('Puppeteer launch error:', err.message);
+        return [];
+    }
 
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -408,25 +421,49 @@ async function searchAll(query, city = 'Buenos Aires', maxResults = 10) {
 
     // 1. Google Maps
     console.log(`🗺️  Scraping Google Maps: "${query} ${city}"...`);
-    const mapsLeads = await scrapeGoogleMaps(`${query} ${city}`, maxResults);
-    allLeads.push(...mapsLeads);
+    try {
+        const mapsLeads = await scrapeGoogleMaps(`${query} ${city}`, maxResults);
+        allLeads.push(...mapsLeads);
+        console.log(`   Google Maps: ${mapsLeads.length} leads`);
+    } catch (err) {
+        console.error('   Google Maps error:', err.message);
+    }
 
-    // 2. Enrich leads with missing data
+    // 2. Páginas Amarillas (fallback + extra results)
+    const paCity = city.toLowerCase().replace(/\s+/g, '-').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    console.log(`📒 Scraping Páginas Amarillas: "${query} ${paCity}"...`);
+    try {
+        const paLeads = await scrapePaginasAmarillas(query, paCity, maxResults);
+        allLeads.push(...paLeads);
+        console.log(`   Páginas Amarillas: ${paLeads.length} leads`);
+    } catch (err) {
+        console.error('   Páginas Amarillas error:', err.message);
+    }
+
+    // 3. Enrich leads with website data
     console.log(`🔍 Enriching leads with website data...`);
     for (const lead of allLeads) {
         if (lead.website && (!lead.email || !lead.instagram)) {
-            const enriched = await enrichLead(lead);
-            Object.assign(lead, enriched);
+            try {
+                const enriched = await enrichLead(lead);
+                Object.assign(lead, enriched);
+            } catch (err) {
+                // ignore enrichment errors
+            }
         }
     }
 
-    // 3. Filter leads with at least one contact method
-    const validLeads = allLeads.filter(l =>
-        l.email || l.phone || l.instagram || l.facebook || l.tiktok
-    );
+    // 4. Deduplicate by name
+    const seen = new Set();
+    const uniqueLeads = allLeads.filter(l => {
+        const key = l.name.toLowerCase().trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 
-    console.log(`✅ Found ${validLeads.length} leads with contact data`);
-    return validLeads;
+    console.log(`✅ Found ${uniqueLeads.length} unique leads`);
+    return uniqueLeads;
 }
 
 // =================== EXPORT ===================

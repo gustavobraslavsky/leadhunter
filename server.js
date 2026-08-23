@@ -48,7 +48,8 @@ app.post('/api/demo', async (req, res) => {
     if (!rubro || !ciudad) return res.json({ leads: [] });
 
     try {
-        const leads = await scrapers.searchAll(rubro, ciudad, max);
+        const leads = await scrapers.searchAll(rubro, ciudad, Math.max(max, 10));
+        // Return ALL leads, even without email - user wants to see everything
         res.json({ leads: leads.slice(0, max) });
     } catch (err) {
         console.error('Demo error:', err.message);
@@ -165,6 +166,7 @@ app.post('/api/search', async (req, res) => {
         existingLeads.push(...newLeads);
         fs.writeFileSync(ALL_LEADS, JSON.stringify(existingLeads, null, 2));
 
+        // Return ALL leads (with or without email)
         res.json({ leads: allLeads, newCount: newLeads.length, total: existingLeads.length });
     } catch (err) {
         console.error('Search error:', err.message);
