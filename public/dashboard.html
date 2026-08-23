@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — LeadHunter</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #0F0F23; }
+        .dashboard { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .dash-header h1 { font-size: 1.8rem; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .dash-nav { display: flex; gap: 8px; }
+        .dash-nav a { color: var(--text-muted); text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; }
+        .dash-nav a:hover, .dash-nav a.active { background: rgba(108,92,231,0.2); color: white; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 800; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-card .stat-label { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+        
+        .search-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 32px; }
+        .search-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .search-row input, .search-row select { flex: 1; min-width: 180px; padding: 12px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: white; font-size: 0.95rem; }
+        .search-row input:focus, .search-row select:focus { outline: none; border-color: var(--primary); }
+        .search-row select option { background: #1A1A3E; color: white; }
+        
+        .table-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 32px; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); }
+        .table-header h2 { font-size: 1.2rem; margin: 0; }
+        .table-actions { display: flex; gap: 8px; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        thead th { padding: 12px 16px; text-align: left; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+        tbody td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.9rem; }
+        tbody tr:hover { background: rgba(108,92,231,0.05); }
+        
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+        .badge-email { background: rgba(0,206,201,0.2); color: #00CEC9; }
+        .badge-phone { background: rgba(253,203,110,0.2); color: #FDCB6E; }
+        .badge-ig { background: rgba(228,64,95,0.2); color: #E4405F; }
+        .badge-fb { background: rgba(24,119,242,0.2); color: #1877F2; }
+        .badge-tt { background: rgba(255,255,255,0.1); color: white; }
+        .badge-source { background: rgba(108,92,231,0.2); color: #A29BFE; }
+        
+        .empty-state { text-align: center; padding: 60px 24px; color: var(--text-muted); }
+        .empty-state .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+        
+        .loading { text-align: center; padding: 40px; }
+        
+        @media (max-width: 768px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            table { font-size: 0.8rem; }
+            thead th, tbody td { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="dash-header">
+            <div>
+                <h1>🎯 LeadHunter Dashboard</h1>
+                <p style="color:var(--text-muted);font-size:0.9rem;">Gestioná tus leads y scraping</p>
+            </div>
+            <div class="dash-nav">
+                <a href="/" class="">🏠 Landing</a>
+                <a href="/dashboard" class="active">📊 Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row" id="stats">
+            <div class="stat-card"><div class="stat-value" id="stat-total">-</div><div class="stat-label">Total leads</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-email">-</div><div class="stat-label">Con email</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-phone">-</div><div class="stat-label">Con teléfono</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-ig">-</div><div class="stat-label">Instagram</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-fb">-</div><div class="stat-label">Facebook</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-tt">-</div><div class="stat-label">TikTok</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-subs">-</div><div class="stat-label">Suscriptores</div></div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+            <h3 style="margin-bottom:16px;">🔍 Buscar nuevos leads</h3>
+            <div class="search-row">
+                <input type="text" id="search-query" placeholder="Rubro: odontólogos, hoteles, restaurantes...">
+                <input type="text" id="search-city" placeholder="Ciudad: Buenos Aires, Córdoba...">
+                <select id="search-max">
+                    <option value="5">5 leads</option>
+                    <option value="10" selected>10 leads</option>
+                    <option value="20">20 leads</option>
+                </select>
+                <button class="btn btn-primary" onclick="runSearch()" id="search-btn">🔍 Buscar</button>
+            </div>
+            <div id="search-status" style="margin-top:12px;color:var(--text-muted);font-size:0.9rem;"></div>
+        </div>
+
+        <!-- Leads Table -->
+        <div class="table-box">
+            <div class="table-header">
+                <h2>📋 Leads (<span id="leads-count">0</span>)</h2>
+                <div class="table-actions">
+                    <button class="btn btn-secondary" onclick="exportCSV()" style="font-size:0.85rem;padding:8px 16px;">📥 CSV</button>
+                    <button class="btn btn-secondary" onclick="exportJSON()" style="font-size:0.85rem;padding:8px 16px;">📥 JSON</button>
+                    <button class="btn btn-primary" onclick="loadLeads()" style="font-size:0.85rem;padding:8px 16px;">🔄 Actualizar</button>
+                </div>
+            </div>
+            <div id="leads-table" class="loading">
+                <p>Cargando leads...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '';
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API}/api/stats`);
+                const data = await res.json();
+                document.getElementById('stat-total').textContent = data.totalLeads || 0;
+                document.getElementById('stat-email').textContent = data.leadsWithEmail || 0;
+                document.getElementById('stat-phone').textContent = data.leadsWithPhone || 0;
+                document.getElementById('stat-ig').textContent = data.leadsWithInstagram || 0;
+                document.getElementById('stat-fb').textContent = data.leadsWithFacebook || 0;
+                document.getElementById('stat-tt').textContent = data.leadsWithTikTok || 0;
+                document.getElementById('stat-subs').textContent = data.activeSubscriptions || 0;
+            } catch (err) {
+                console.error('Stats error:', err);
+            }
+        }
+
+        // Load leads
+        async function loadLeads() {
+            try {
+                const res = await fetch(`${API}/api/leads`);
+                const data = await res.json();
+                document.getElementById('leads-count').textContent = data.leads.length;
+
+                if (data.leads.length === 0) {
+                    document.getElementById('leads-table').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🎯</div>
+                            <h3>Sin leads aún</h3>
+                            <p>Usá el buscador de arriba para encontrar leads de negocios</p>
+                        </div>`;
+                    return;
+                }
+
+                const table = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Negocio</th>
+                                <th>Contacto</th>
+                                <th>Ubicación</th>
+                                <th>Rating</th>
+                                <th>Fuente</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.leads.map(l => `
+                                <tr>
+                                    <td>
+                                        <strong>${l.name || 'Sin nombre'}</strong>
+                                        ${l.website ? `<br><a href="${l.website}" target="_blank" style="color:var(--primary-light);font-size:0.8rem;">🌐 ${l.website.replace(/https?:\/\//, '').substring(0, 30)}</a>` : ''}
+                                    </td>
+                                    <td>
+                                        ${l.email ? `<span class="badge badge-email">📧 ${l.email}</span><br>` : ''}
+                                        ${l.phone ? `<span class="badge badge-phone">📱 ${l.phone}</span><br>` : ''}
+                                        ${l.instagram ? `<span class="badge badge-ig">📸 ${l.instagram.replace('instagram.com/', '@')}</span><br>` : ''}
+                                        ${l.facebook ? `<span class="badge badge-fb">👤 ${l.facebook.replace('facebook.com/', '')}</span><br>` : ''}
+                                        ${l.tiktok ? `<span class="badge badge-tt">🎵 ${l.tiktok}</span>` : ''}
+                                    </td>
+                                    <td style="font-size:0.85rem;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${l.address || '-'}</td>
+                                    <td>${l.rating ? `⭐ ${l.rating} (${l.reviews})` : '-'}</td>
+                                    <td><span class="badge badge-source">${l.source || '-'}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+
+                document.getElementById('leads-table').innerHTML = table;
+            } catch (err) {
+                document.getElementById('leads-table').innerHTML = '<div class="empty-state"><p>Error al cargar leads</p></div>';
+            }
+        }
+
+        // Search
+        async function runSearch() {
+            const query = document.getElementById('search-query').value.trim();
+            const city = document.getElementById('search-city').value.trim();
+            const max = document.getElementById('search-max').value;
+
+            if (!query) return alert('Escribí un rubro');
+
+            const btn = document.getElementById('search-btn');
+            const status = document.getElementById('search-status');
+            btn.disabled = true;
+            btn.textContent = '⏳ Buscando...';
+            status.textContent = '🔍 Scraping Google Maps y websites... Esto puede tardar 1-2 minutos.';
+
+            try {
+                const res = await fetch(`${API}/api/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, city, max: parseInt(max) })
+                });
+                const data = await res.json();
+
+                status.innerHTML = `✅ <strong>${data.leads.length} leads encontrados</strong> (${data.newCount} nuevos, ${data.total} total en base)`;
+
+                loadLeads();
+                loadStats();
+            } catch (err) {
+                status.innerHTML = `❌ Error: ${err.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Buscar';
+            }
+        }
+
+        // Export
+        function exportCSV() { window.location.href = `${API}/api/leads/export/csv`; }
+        function exportJSON() { window.location.href = `${API}/api/leads/export/json`; }
+
+        // Init
+        loadStats();
+        loadLeads();
+    </script>
+</body>
+</html>

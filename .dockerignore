@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+data/
+*.json
+.vercel/
+render.yaml
+meta-ads.md
+README.md
+.git
+.gitignore
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db

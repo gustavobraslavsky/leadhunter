@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadHunter — Encuentra leads con email, WhatsApp y redes sociales</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Hero -->
+    <header class="hero">
+        <div class="container">
+            <div class="badge">🇦🇷 Hecho para Argentina</div>
+            <h1>Encontrá <span class="highlight">cientos de leads</span> con email, WhatsApp y redes sociales</h1>
+            <p class="subtitle">Scrapeá Google Maps, Instagram, Facebook, TikTok y directorios. Obtener datos de contacto de negocios reales en segundos, no en horas.</p>
+            
+            <div class="hero-cta">
+                <a href="#pricing" class="btn btn-primary btn-lg">Empezá gratis →</a>
+                <a href="#demo" class="btn btn-secondary btn-lg">Ver demo en vivo</a>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat">
+                    <strong>150K+</strong>
+                    <span>negocios scrapeados</span>
+                </div>
+                <div class="stat">
+                    <strong>45K+</strong>
+                    <span>emails encontrados</span>
+                </div>
+                <div class="stat">
+                    <strong>25+</strong>
+                    <span>rubros cubiertos</span>
+                </div>
+                <div class="stat">
+                    <strong>24/7</strong>
+                    <span>automatización</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Problema -->
+    <section class="section problem-section">
+        <div class="container">
+            <h2>Buscar leads manualmente es una pérdida de tiempo</h2>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">😰</div>
+                    <h3>Horas buscando</h3>
+                    <p>Copiar y pegar datos de Google Maps uno por uno. 3 horas para 50 leads.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">❌</div>
+                    <h3>Datos incompletos</h3>
+                    <p>Google Maps no siempre tiene email. Instagram no muestra teléfono. Facebook oculta todo.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🔄</div>
+                    <h3>Sin automatización</h3>
+                    <p>Cada vez que necesitás leads nuevos, tenés que empezar de cero.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solución -->
+    <section class="section solution-section">
+        <div class="container">
+            <h2>LeadHunter lo hace todo por vos</h2>
+            <div class="solution-grid">
+                <div class="solution-card">
+                    <div class="solution-number">1</div>
+                    <h3>Elegí rubro y ciudad</h3>
+                    <p>Escribí "odontólogos Córdoba" o "hoteles Bariloche". Funciona con cualquier rubro en todo el país.</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-number">2</div>
+                    <h3>Scrapeamos 5 fuentes</h3>
+                    <p>Google Maps + Instagram + Facebook + TikTok + Páginas Amarillas. Buscamos email, WhatsApp, teléfono y redes.</p>
+                </div>
+                <div class="solution-card">
+                    <div class="solution-number">3</div>
+                    <h3>Exportá y contactá</h3>
+                    <p>Descargá en Excel, CSV o conectá con tu CRM. Leads listos para vender.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo -->
+    <section class="section demo-section" id="demo">
+        <div class="container">
+            <h2>Probá LeadHunter ahora</h2>
+            <p class="section-subtitle">Escribí un rubro y una ciudad. Te mostramos los resultados en vivo.</p>
+            
+            <div class="demo-box">
+                <div class="demo-inputs">
+                    <input type="text" id="demo-rubro" placeholder="Ej: odontólogos, hoteles, restaurantes..." value="odontólogos">
+                    <input type="text" id="demo-ciudad" placeholder="Ej: Buenos Aires, Córdoba, Mendoza..." value="Córdoba">
+                    <button id="demo-btn" class="btn btn-primary" onclick="runDemo()">🔍 Buscar leads</button>
+                </div>
+                <div id="demo-results" class="demo-results" style="display:none;">
+                    <div class="demo-loading">
+                        <div class="spinner"></div>
+                        <p>Scrapeando Google Maps y websites...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fuentes -->
+    <section class="section sources-section">
+        <div class="container">
+            <h2>Scrapeamos donde están tus clientes</h2>
+            <div class="sources-grid">
+                <div class="source-card google">
+                    <h3>🗺️ Google Maps</h3>
+                    <p>Email, teléfono, dirección, rating, reseñas, horarios, website</p>
+                </div>
+                <div class="source-card instagram">
+                    <h3>📸 Instagram</h3>
+                    <p>Email del perfil, teléfono, bio, seguidores, posts</p>
+                </div>
+                <div class="source-card facebook">
+                    <h3>👤 Facebook</h3>
+                    <p>Email, teléfono, dirección, horarios, valoraciones</p>
+                </div>
+                <div class="source-card tiktok">
+                    <h3>🎵 TikTok</h3>
+                    <p>Email de contacto, enlaces, seguidores</p>
+                </div>
+                <div class="source-card paginas">
+                    <h3>📒 Páginas Amarillas</h3>
+                    <p>Teléfono, email, dirección, rubro, horarios</p>
+                </div>
+                <div class="source-card web">
+                    <h3>🌐 Sitios web</h3>
+                    <p>Emails de contacto, formulario, redes sociales enlazadas</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section features-section">
+        <div class="container">
+            <h2>Todo lo que necesitás para conseguir clientes</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📧</div>
+                    <h3>Emails verificados</h3>
+                    <p>Buscamos emails en websites, mailtos, JSON-LD, metatags y formularios de contacto.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>WhatsApp directo</h3>
+                    <p>Links de WhatsApp listos para enviar. Click y empieza la conversación.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Exportar a Excel</h3>
+                    <p>Descargá todos los leads en .csv o .xlsx con todos los datos organizados.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Scraping diario</h3>
+                    <p>Automatizá la búsqueda. Todos los días nuevos leads sin que hagas nada.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Sin filtros</h3>
+                    <p>Cualquier negocio que tenga reseñas de Google. Sin restricciones de rating o reseñas.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Todo el país</h3>
+                    <p>Buenos Aires, Córdoba, Rosario, Mendoza, y cualquier ciudad de Argentina.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="section pricing-section" id="pricing">
+        <div class="container">
+            <h2>Elegí tu plan</h2>
+            <p class="section-subtitle">Empezá gratis. Upgrade cuando necesités más.</p>
+            
+            <div class="billing-toggle">
+                <span id="toggle-mensual" class="active">Mensual</span>
+                <label class="switch">
+                    <input type="checkbox" id="billing-toggle" onchange="toggleBilling()">
+                    <span class="slider"></span>
+                </label>
+                <span id="toggle-anual" class="save-badge">Anual <span class="badge-green">-20%</span></span>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- Plan Básico -->
+                <div class="pricing-card">
+                    <div class="plan-name">Básico</div>
+                    <div class="plan-price">
+                        <span class="currency">$</span>
+                        <span class="amount" data-mensual="4970" data-anual="3970">4.970</span>
+                        <span class="period">/mes</span>
+                    </div>
+                    <div class="plan-billing" id="billing-basico">Mensual — $4.970/mes</div>
+                    <ul class="plan-features">
+                        <li>✅ 100 búsquedas/mes</li>
+                        <li>✅ Google Maps</li>
+                        <li>✅ Hasta 500 leads/mes</li>
+                        <li>✅ Email + WhatsApp + Teléfono</li>
+                        <li>✅ Exportar CSV</li>
+                        <li>❌ Instagram, Facebook, TikTok</li>
+                        <li>❌ Scraping automático diario</li>
+                    </ul>
+                    <button class="btn btn-outline btn-block" onclick="checkout('basico')">Empezar ahora →</button>
+                </div>
+
+                <!-- Plan Pro -->
+                <div class="pricing-card featured">
+                    <div class="plan-badge">🔥 Más popular</div>
+                    <div class="plan-name">Pro</div>
+                    <div class="plan-price">
+                        <span class="currency">$</span>
+                        <span class="amount" data-mensual="14900" data-anual="11900">14.900</span>
+                        <span class="period">/mes</span>
+                    </div>
+                    <div class="plan-billing" id="billing-pro">Mensual — $14.900/mes</div>
+                    <ul class="plan-features">
+                        <li>✅ 500 búsquedas/mes</li>
+                        <li>✅ Google Maps + Instagram + Facebook + TikTok</li>
+                        <li>✅ Hasta 5.000 leads/mes</li>
+                        <li>✅ Todos los datos de contacto</li>
+                        <li>✅ Exportar CSV + Excel</li>
+                        <li>✅ Scraping automático diario</li>
+                        <li>✅ Historial de leads</li>
+                        <li>✅ Soporte prioritario</li>
+                    </ul>
+                    <button class="btn btn-primary btn-block" onclick="checkout('pro')">Elegir Pro →</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section faq-section">
+        <div class="container">
+            <h2>Preguntas frecuentes</h2>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h3>¿Es legal hacer scraping?</h3>
+                    <p>Sí. LeadHunter accede a información pública de negocios (Google Maps, redes sociales públicas). No hackeamos ni accedemos a datos privados.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Cuántos leads puedo conseguir?</h3>
+                    <p>Depende del plan. Básico: 500/mes. Pro: 5.000/mes. Enterprise: ilimitados. Los leads incluyen email, WhatsApp, teléfono y redes sociales.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Funciona con cualquier rubro?</h3>
+                    <p>Sí. Podés buscar cualquier rubro: odontólogos, hoteles, restaurantes, talleres, clínicas, etc. Funciona en todo el país.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Puedo cancelar cuando quiera?</h3>
+                    <p>Sí. No hay permanencia. Cancelás y dejás de pagar. Si pagaste el mes, lo usás hasta que se termine.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Cómo funciona el scraping automático?</h3>
+                    <p>En plan Pro y Enterprise, LeadHunter busca leads nuevos todos los días automáticamente. Recibís un email con los nuevos leads encontrados.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>¿Los emails son verificados?</h3>
+                    <p>Los emails se encuentran en websites, formularios y datos públicos. No garantizamos que todos estén activos, pero la tasa de deliverability es alta (~85%).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <h3>🎯 LeadHunter</h3>
+                    <p>Encuentra leads con email, WhatsApp y redes sociales de cualquier negocio en Argentina.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Producto</h4>
+                    <a href="#demo">Demo</a>
+                    <a href="#pricing">Precios</a>
+                    <a href="#features">Features</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Legal</h4>
+                    <a href="/privacidad.html">Privacidad</a>
+                    <a href="/terminos.html">Términos</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Contacto</h4>
+                    <a href="mailto:hola@leadhunter.com.ar">hola@leadhunter.com.ar</a>
+                    <a href="https://wa.me/5491155869039">WhatsApp</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 LeadHunter. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: leadhunter
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3003
+      - key: NODE_ENV
+        value: production
+      - key: MP_ACCESS_TOKEN
+        sync: false
+      - key: MP_BASICO_MENSUAL
+        sync: false
+      - key: MP_PRO_MENSUAL
+        sync: false

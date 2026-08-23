@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "outputDirectory": "public",
+  "installCommand": "npm install --ignore-scripts",
+  "buildCommand": "echo 'Static site - no build needed'",
+  "framework": null
+}
