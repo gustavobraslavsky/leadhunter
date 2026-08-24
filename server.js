@@ -48,14 +48,63 @@ if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 if (!fs.existsSync(ALL_LEADS)) fs.writeFileSync(ALL_LEADS, '[]');
 if (!fs.existsSync(SUBSCRIPTIONS)) fs.writeFileSync(SUBSCRIPTIONS, '[]');
 
+// =================== ADMIN: API KEY CONFIG ===================
+const API_KEY_FILE = path.join(DB_DIR, 'api-key.json');
+
+// Helper: get API key from env or file
+function getApiKey() {
+    const envKey = process.env.GOOGLE_MAPS_API_KEY || '';
+    let fileKey = '';
+    try { fileKey = JSON.parse(fs.readFileSync(API_KEY_FILE, 'utf8')).key || ''; } catch (e) {}
+    return envKey || fileKey;
+}
+
+app.get('/api/admin/key', (req, res) => {
+    const key = getApiKey();
+    res.json({ configured: !!key, key: key ? key.substring(0, 8) + '...' : '' });
+});
+
+app.post('/api/admin/key', (req, res) => {
+    const { key } = req.body;
+    if (!key || typeof key !== 'string' || key.length < 10) {
+        return res.status(400).json({ error: 'API key inválida' });
+    }
+    try {
+        fs.writeFileSync(API_KEY_FILE, JSON.stringify({ key, updatedAt: new Date().toISOString() }, null, 2));
+        // Also set in process.env so scrapers pick it up immediately
+        process.env.GOOGLE_MAPS_API_KEY = key;
+        res.json({ success: true, message: 'API key guardada. El scraper la usará inmediatamente.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Error al guardar: ' + err.message });
+    }
+});
+
+app.get('/api/admin/status', (req, res) => {
+    const key = getApiKey();
+    res.json({
+        apiKey: !!key,
+        mercadopago: !!MP_ACCESS_TOKEN,
+        nodeEnv: process.env.NODE_ENV || 'development',
+        uptime: process.uptime()
+    });
+});
+
 // =================== DEMO ENDPOINT ===================
 app.post('/api/demo', async (req, res) => {
     const { rubro, ciudad, max = 5 } = req.body;
-    if (!rubro || !ciudad) return res.json({ leads: [] });
+    if (!rubro || !ciudad) return res.json({ leads: [], error: 'Faltan rubro y ciudad' });
+
+    if (!getApiKey()) {
+        return res.json({ 
+            leads: [], 
+            error: 'API key de Google no configurada. Andá a /setup para configurarla.',
+            setupRequired: true
+        });
+    }
+    process.env.GOOGLE_MAPS_API_KEY = getApiKey();
 
     try {
         const leads = await scrapers.searchAll(rubro, ciudad, Math.max(max, 10));
-        // Return ALL leads, even without email - user wants to see everything
         res.json({ leads: leads.slice(0, max) });
     } catch (err) {
         console.error('Demo error:', err.message);
@@ -148,6 +197,14 @@ app.post('/api/webhook', async (req, res) => {
 app.post('/api/search', async (req, res) => {
     const { query, city, max = 20 } = req.body;
     if (!query) return res.status(400).json({ error: 'Query requerido' });
+
+    if (!getApiKey()) {
+        return res.status(400).json({ 
+            error: 'API key de Google no configurada. Andá a /setup para configurarla.',
+            setupRequired: true
+        });
+    }
+    process.env.GOOGLE_MAPS_API_KEY = getApiKey();
 
     // Timeout: max 25 seconds for the whole search
     const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Búsqueda tardó demasiado')), 25000));
@@ -310,6 +367,9 @@ app.get('/api/stats/advanced', (req, res) => {
 });
 
 // =================== PAGES ===================
+app.get('/setup', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'setup.html'));
+});
 app.get('/exito', (req, res) => {
     res.send(`
         <html><body style="font-family:sans-serif;text-align:center;padding:100px;background:#0F0F23;color:white;">

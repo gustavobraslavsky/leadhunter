@@ -19,8 +19,18 @@ async function runDemo() {
         });
         const data = await res.json();
 
+        if (data.setupRequired) {
+            results.innerHTML = `
+                <div style="text-align:center;padding:32px;background:rgba(255,107,107,0.1);border-radius:12px;border:1px solid rgba(255,107,107,0.3);">
+                    <h3 style="color:var(--danger);margin-bottom:12px;">⚙️ Configuración requerida</h3>
+                    <p style="color:var(--text-muted);margin-bottom:16px;">El servidor necesita una API key de Google Places para buscar negocios por rubro.</p>
+                    <p style="color:var(--text-muted);font-size:0.85rem;">Pedile al administrador que agregue <code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">GOOGLE_MAPS_API_KEY</code> en las variables de entorno de Render.</p>
+                </div>
+            `;
+            return;
+        }
         if (!data.leads || data.leads.length === 0) {
-            results.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:32px;">No se encontraron leads en esta búsqueda. Probá con otro rubro o ciudad (ej:odontólogos Córdoba, hoteles Bariloche, restaurantes Rosario).</p>';
+            results.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:32px;">No se encontraron leads en esta búsqueda. Probá con otro rubro o ciudad (ej: odontólogos Córdoba, hoteles Bariloche, restaurantes Rosario).</p>';
             return;
         }
 

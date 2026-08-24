@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadHunter — Configuración</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .setup-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            margin: 40px auto;
+        }
+        .step {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: flex-start;
+        }
+        .step-num {
+            background: var(--accent);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .step-content h3 {
+            margin: 0 0 6px;
+            font-size: 1rem;
+        }
+        .step-content p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .step-content a {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+        .step-content code {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .key-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .key-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-size: 0.95rem;
+            font-family: monospace;
+        }
+        .key-input button {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .status-ok { color: #00b894; }
+        .status-error { color: #ff6b6b; }
+        .test-result {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width:700px;margin:0 auto;padding:24px;">
+        <h1 style="margin-bottom:8px;">⚙️ Configuración de LeadHunter</h1>
+        <p style="color:var(--text-muted);margin-bottom:32px;">Necesitás una API key de Google Places para buscar negocios por rubro.</p>
+
+        <div class="setup-card">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h3>Crear proyecto en Google Cloud</h3>
+                    <p>Andá a <a href="https://console.cloud.google.com/projectcreate" target="_blank">Google Cloud Console</a>, creá un proyecto nuevo con nombre <code>LeadHunter</code> y hacé click en "Create".</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h3>Habilitar Places API (New)</h3>
+                    <p>Andá a <a href="https://console.cloud.google.com/apis/library/places.googleapis.com" target="_blank">Places API</a> y hacé click en <strong>"Enable"</strong>.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h3>Crear API Key</h3>
+                    <p>Andá a <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Credentials</a> → "+ Create Credentials" → "API Key". Copiá la key.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                    <h3>Activar billing (gratis)</h3>
+                    <p>Andá a <a href="https://console.cloud.google.com/billing" target="_blank">Billing</a> y linkeá una tarjeta. Nuevo usuarios reciben <strong>$300 USD de crédito gratis</strong> (90 días, ~10,000 búsquedas).</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-content">
+                    <h3>Pegá tu API Key acá</h3>
+                    <div class="key-input">
+                        <input type="text" id="api-key" placeholder="AIza..." />
+                        <button onclick="saveKey()">Guardar</button>
+                    </div>
+                    <div id="key-status" class="test-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="setup-card" style="margin-top:24px;">
+            <h2 style="font-size:1.1rem;margin-bottom:16px;">🧪 Test rápido</h2>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px;">Una vez guardada la key, buscá un rubro para verificar que funciona:</p>
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                <input type="text" id="test-rubro" placeholder="Rubro (ej: cafeterías)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:white;" />
+                <input type="text" id="test-ciudad" placeholder="Ciudad (ej: Córdoba)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:white;" />
+                <button onclick="testSearch()" class="btn btn-primary" style="padding:10px 20px;">Buscar</button>
+            </div>
+            <div id="test-results"></div>
+        </div>
+
+        <div style="text-align:center;margin-top:32px;">
+            <a href="/" style="color:var(--accent);">← Volver a LeadHunter</a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="/dashboard.html" style="color:var(--accent);">Dashboard →</a>
+        </div>
+    </div>
+
+    <script>
+        async function saveKey() {
+            const key = document.getElementById('api-key').value.trim();
+            const status = document.getElementById('key-status');
+            
+            if (!key) {
+                status.style.display = 'block';
+                status.innerHTML = '<span class="status-error">❌ Pegá tu API key primero</span>';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                const data = await res.json();
+                
+                status.style.display = 'block';
+                if (data.success) {
+                    status.innerHTML = '<span class="status-ok">✅ API key guardada correctamente</span>';
+                } else {
+                    status.innerHTML = '<span class="status-error">❌ ' + (data.error || 'Error al guardar') + '</span>';
+                }
+            } catch (err) {
+                status.style.display = 'block';
+                status.innerHTML = '<span class="status-error">❌ Error de conexión</span>';
+            }
+        }
+
+        async function testSearch() {
+            const rubro = document.getElementById('test-rubro').value.trim();
+            const ciudad = document.getElementById('test-ciudad').value.trim();
+            const results = document.getElementById('test-results');
+            
+            if (!rubro || !ciudad) {
+                results.innerHTML = '<p style="color:var(--danger);">Completá rubro y ciudad</p>';
+                return;
+            }
+
+            results.innerHTML = '<p style="color:var(--text-muted);">🔍 Buscando...</p>';
+
+            try {
+                const res = await fetch('/api/demo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rubro, ciudad, max: 5 })
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    results.innerHTML = '<p style="color:var(--danger);">❌ ' + data.error + '</p>';
+                    return;
+                }
+
+                if (!data.leads || data.leads.length === 0) {
+                    results.innerHTML = '<p style="color:var(--text-muted);">No se encontraron resultados</p>';
+                    return;
+                }
+
+                results.innerHTML = data.leads.map(l => `
+                    <div style="padding:12px;margin-bottom:8px;background:rgba(0,184,148,0.1);border:1px solid rgba(0,184,148,0.3);border-radius:8px;">
+                        <strong>${l.name || 'Sin nombre'}</strong><br>
+                        <span style="font-size:0.85rem;color:var(--text-muted);">
+                            ${l.email ? '📧 ' + l.email + ' · ' : ''}
+                            ${l.phone ? '📱 ' + l.phone + ' · ' : ''}
+                            ${l.address || ''}
+                            ${l.rating ? ' · ⭐ ' + l.rating : ''}
+                        </span>
+                    </div>
+                `).join('');
+
+                results.innerHTML += `<p style="text-align:center;color:var(--accent);margin-top:12px;">✅ ${data.leads.length} leads encontrados — ¡Funciona!</p>`;
+            } catch (err) {
+                results.innerHTML = '<p style="color:var(--danger);">❌ Error: ' + err.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>
