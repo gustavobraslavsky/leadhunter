@@ -4,7 +4,13 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const scrapers = require('./scrapers');
-const { DailyAutomation, LeadAlerts, exportToExcel, exportToHubspot, exportToPipedrive, getAdvancedStats } = require('./pro-features');
+let proFeatures;
+try {
+    proFeatures = require('./pro-features');
+} catch (e) {
+    // pro-features is optional
+    proFeatures = { DailyAutomation: class { listJobs(){return []} scheduleDaily(){return{}} toggleJob(){return{}} deleteJob(){} }, LeadAlerts: class { listAlerts(){return []} createAlert(){return{}} toggleAlert(){return{}} deleteAlert(){} }, exportToExcel: ()=>'', exportToHubspot: ()=>[], exportToPipedrive: ()=>[], getAdvancedStats: ()=>({}) };
+}
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -140,33 +146,24 @@ app.post('/api/webhook', async (req, res) => {
 
 // =================== SEARCH ENDPOINT ===================
 app.post('/api/search', async (req, res) => {
-    const { query, city, max = 20, sources = ['google_maps'] } = req.body;
+    const { query, city, max = 20 } = req.body;
     if (!query) return res.status(400).json({ error: 'Query requerido' });
 
+    // Timeout: max 25 seconds for the whole search
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Búsqueda tardó demasiado')), 25000));
+
     try {
-        let allLeads = [];
-
-        if (sources.includes('google_maps')) {
-            const mapsLeads = await scrapers.scrapeGoogleMaps(`${query} ${city || ''}`, max);
-            allLeads.push(...mapsLeads);
-        }
-
-        // Enrich with website data
-        for (const lead of allLeads) {
-            if (lead.website && (!lead.email || !lead.instagram)) {
-                const enriched = await scrapers.enrichLead(lead);
-                Object.assign(lead, enriched);
-            }
-        }
+        const searchPromise = scrapers.searchAll(query, city || '', max);
+        const allLeads = await Promise.race([searchPromise, timeout]);
 
         // Save to all-leads
-        const existingLeads = JSON.parse(fs.readFileSync(ALL_LEADS, 'utf8'));
+        let existingLeads = [];
+        try { existingLeads = JSON.parse(fs.readFileSync(ALL_LEADS, 'utf8')); } catch(e) { existingLeads = []; }
         const existingNames = new Set(existingLeads.map(l => l.name));
-        const newLeads = allLeads.filter(l => !existingNames.has(l.name));
+        const newLeads = allLeads.filter(l => !existingNames.has(l.name) && l.name);
         existingLeads.push(...newLeads);
-        fs.writeFileSync(ALL_LEADS, JSON.stringify(existingLeads, null, 2));
+        try { fs.writeFileSync(ALL_LEADS, JSON.stringify(existingLeads, null, 2)); } catch(e) {}
 
-        // Return ALL leads (with or without email)
         res.json({ leads: allLeads, newCount: newLeads.length, total: existingLeads.length });
     } catch (err) {
         console.error('Search error:', err.message);
@@ -241,8 +238,8 @@ app.get('/api/stats', (req, res) => {
 });
 
 // =================== PRO FEATURES ===================
-const dailyAuto = new DailyAutomation();
-const leadAlerts = new LeadAlerts();
+const dailyAuto = new proFeatures.DailyAutomation();
+const leadAlerts = new proFeatures.LeadAlerts();
 
 // Scheduled scrapes
 app.get('/api/scheduled', (req, res) => {
@@ -291,7 +288,7 @@ app.delete('/api/alerts/:id', (req, res) => {
 // Advanced export
 app.get('/api/leads/export/excel', (req, res) => {
     const leads = JSON.parse(fs.readFileSync(ALL_LEADS, 'utf8'));
-    const csv = exportToExcel(leads);
+    const csv = proFeatures.exportToExcel(leads);
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=leads-leadhunter.csv');
     res.send(csv);
@@ -299,17 +296,17 @@ app.get('/api/leads/export/excel', (req, res) => {
 
 app.get('/api/leads/export/hubspot', (req, res) => {
     const leads = JSON.parse(fs.readFileSync(ALL_LEADS, 'utf8'));
-    res.json(exportToHubspot(leads));
+    res.json(proFeatures.exportToHubspot(leads));
 });
 
 app.get('/api/leads/export/pipedrive', (req, res) => {
     const leads = JSON.parse(fs.readFileSync(ALL_LEADS, 'utf8'));
-    res.json(exportToPipedrive(leads));
+    res.json(proFeatures.exportToPipedrive(leads));
 });
 
 // Advanced stats
 app.get('/api/stats/advanced', (req, res) => {
-    res.json(getAdvancedStats());
+    res.json(proFeatures.getAdvancedStats());
 });
 
 // =================== PAGES ===================

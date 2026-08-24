@@ -1,7 +1,4 @@
-FROM ghcr.io/puppeteer/puppeteer:latest
-
-# Switch to root for installation
-USER root
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -14,11 +11,8 @@ RUN npm install --production
 # Copy application files
 COPY . .
 
-# Create data directory and set permissions
-RUN mkdir -p data && chown -R pptruser:pptruser /app
-
-# Switch back to pptruser for running
-USER pptruser
+# Create data directory
+RUN mkdir -p data
 
 # Expose port
 EXPOSE 3003

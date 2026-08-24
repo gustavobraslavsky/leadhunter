@@ -20,17 +20,25 @@ async function runDemo() {
         const data = await res.json();
 
         if (!data.leads || data.leads.length === 0) {
-            results.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:32px;">No se encontraron leads con email en esta búsqueda. Probá con otro rubro o ciudad.</p>';
+            results.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:32px;">No se encontraron leads en esta búsqueda. Probá con otro rubro o ciudad (ej:odontólogos Córdoba, hoteles Bariloche, restaurantes Rosario).</p>';
             return;
         }
 
         results.innerHTML = data.leads.map(l => `
             <div class="lead-card">
                 <div>
-                    <div class="lead-name">${l.name}</div>
-                    <div class="lead-contact">${l.email ? '📧 ' + l.email : ''} ${l.whatsapp ? '📱 WhatsApp' : ''}</div>
+                    <div class="lead-name">${l.name || 'Sin nombre'}</div>
+                    <div class="lead-contact" style="font-size:0.85rem;line-height:1.6;">
+                        ${l.email ? '📧 ' + l.email + '<br>' : ''}
+                        ${l.phone ? '📱 ' + l.phone + '<br>' : ''}
+                        ${l.instagram ? '📸 ' + l.instagram + '<br>' : ''}
+                        ${l.facebook ? '👤 ' + l.facebook + '<br>' : ''}
+                        ${l.tiktok ? '🎵 ' + l.tiktok + '<br>' : ''}
+                        ${l.website ? '🌐 ' + l.website + '<br>' : ''}
+                        ${l.address ? '📍 ' + l.address : ''}
+                    </div>
                 </div>
-                <div class="lead-rating">${l.rating ? '⭐ ' + l.rating : ''}</div>
+                <div class="lead-rating">${l.rating ? '⭐ ' + l.rating : ''} ${l.source ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + l.source + ')</span>' : ''}</div>
             </div>
         `).join('');
 

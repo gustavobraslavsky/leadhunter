@@ -1,14 +1,7 @@
 node_modules
-npm-debug.log
-data/
-.vercel/
-render.yaml
-meta-ads.md
-README.md
+data
 .git
-.gitignore
 .env
-.env.*
 *.log
-.DS_Store
-Thumbs.db
+batch-results
+daily-logs
