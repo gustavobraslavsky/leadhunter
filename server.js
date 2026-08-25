@@ -20,6 +20,56 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// =================== FREE TIER RATE LIMITING ===================
+const FREE_SEARCH_LIMIT = 3; // 3 búsquedas gratis por día
+const SEARCH_USAGE_FILE = path.join(__dirname, 'data', 'search-usage.json');
+
+// In-memory usage tracker (resets on server restart — fine for demo)
+const searchUsage = {};
+
+// Load usage from file on startup
+try {
+    const data = JSON.parse(fs.readFileSync(SEARCH_USAGE_FILE, 'utf8'));
+    Object.assign(searchUsage, data);
+} catch (e) {}
+
+function getClientIP(req) {
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+}
+
+function getTodayKey() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function getUsageCount(ip) {
+    const today = getTodayKey();
+    const record = searchUsage[ip];
+    if (!record || record.date !== today) {
+        searchUsage[ip] = { date: today, count: 0 };
+        return 0;
+    }
+    return record.count;
+}
+
+function incrementUsage(ip) {
+    const today = getTodayKey();
+    if (!searchUsage[ip] || searchUsage[ip].date !== today) {
+        searchUsage[ip] = { date: today, count: 0 };
+    }
+    searchUsage[ip].count++;
+    // Persist to file
+    try { fs.writeFileSync(SEARCH_USAGE_FILE, JSON.stringify(searchUsage, null, 2)); } catch (e) {}
+    return searchUsage[ip].count;
+}
+
+// Cleanup old entries daily
+setInterval(() => {
+    const today = getTodayKey();
+    for (const ip in searchUsage) {
+        if (searchUsage[ip].date !== today) delete searchUsage[ip];
+    }
+}, 60 * 60 * 1000);
+
 // MercadoPago (configurar con tu access token)
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 
@@ -89,10 +139,30 @@ app.get('/api/admin/status', (req, res) => {
     });
 });
 
+// =================== USAGE ENDPOINT ===================
+app.get('/api/usage', (req, res) => {
+    const ip = getClientIP(req);
+    const used = getUsageCount(ip);
+    res.json({ used, limit: FREE_SEARCH_LIMIT, remaining: Math.max(0, FREE_SEARCH_LIMIT - used) });
+});
+
 // =================== DEMO ENDPOINT ===================
 app.post('/api/demo', async (req, res) => {
     const { rubro, ciudad, max = 5 } = req.body;
     if (!rubro || !ciudad) return res.json({ leads: [], error: 'Faltan rubro y ciudad' });
+
+    // Rate limit check
+    const ip = getClientIP(req);
+    const used = getUsageCount(ip);
+    if (used >= FREE_SEARCH_LIMIT) {
+        return res.json({ 
+            leads: [], 
+            error: 'limit_reached',
+            message: `Alcanzaste las ${FREE_SEARCH_LIMIT} búsquedas gratis del día. Upgrade a un plan para continuar.`,
+            used, 
+            limit: FREE_SEARCH_LIMIT
+        });
+    }
 
     if (!getApiKey()) {
         return res.json({ 
@@ -105,7 +175,8 @@ app.post('/api/demo', async (req, res) => {
 
     try {
         const leads = await scrapers.searchAll(rubro, ciudad, Math.max(max, 10));
-        res.json({ leads: leads.slice(0, max) });
+        incrementUsage(ip);
+        res.json({ leads: leads.slice(0, max), usage: { used: used + 1, limit: FREE_SEARCH_LIMIT, remaining: Math.max(0, FREE_SEARCH_LIMIT - used - 1) } });
     } catch (err) {
         console.error('Demo error:', err.message);
         res.json({ leads: [], error: err.message });
@@ -198,6 +269,18 @@ app.post('/api/search', async (req, res) => {
     const { query, city, max = 20 } = req.body;
     if (!query) return res.status(400).json({ error: 'Query requerido' });
 
+    // Rate limit check
+    const ip = getClientIP(req);
+    const used = getUsageCount(ip);
+    if (used >= FREE_SEARCH_LIMIT) {
+        return res.status(403).json({ 
+            error: 'limit_reached',
+            message: `Alcanzaste las ${FREE_SEARCH_LIMIT} búsquedas gratis del día. Upgrade a un plan para continuar.`,
+            used, 
+            limit: FREE_SEARCH_LIMIT
+        });
+    }
+
     if (!getApiKey()) {
         return res.status(400).json({ 
             error: 'API key de Google no configurada. Andá a /setup para configurarla.',
@@ -212,6 +295,7 @@ app.post('/api/search', async (req, res) => {
     try {
         const searchPromise = scrapers.searchAll(query, city || '', max);
         const allLeads = await Promise.race([searchPromise, timeout]);
+        incrementUsage(ip);
 
         // Save to all-leads
         let existingLeads = [];
@@ -221,7 +305,7 @@ app.post('/api/search', async (req, res) => {
         existingLeads.push(...newLeads);
         try { fs.writeFileSync(ALL_LEADS, JSON.stringify(existingLeads, null, 2)); } catch(e) {}
 
-        res.json({ leads: allLeads, newCount: newLeads.length, total: existingLeads.length });
+        res.json({ leads: allLeads, newCount: newLeads.length, total: existingLeads.length, usage: { used: used + 1, limit: FREE_SEARCH_LIMIT, remaining: Math.max(0, FREE_SEARCH_LIMIT - used - 1) } });
     } catch (err) {
         console.error('Search error:', err.message);
         res.status(500).json({ error: err.message });

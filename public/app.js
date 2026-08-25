@@ -1,6 +1,47 @@
 // LeadHunter — Frontend JS
 const API = '';
 
+// =================== USAGE TRACKER ===================
+let searchUsed = 0;
+let searchLimit = 3;
+let searchRemaining = 3;
+
+async function loadUsage() {
+    try {
+        const res = await fetch(`${API}/api/usage`);
+        const data = await res.json();
+        searchUsed = data.used;
+        searchLimit = data.limit;
+        searchRemaining = data.remaining;
+        updateUsageUI();
+    } catch (e) {}
+}
+
+function updateUsageUI() {
+    document.querySelectorAll('.usage-badge').forEach(el => {
+        if (searchRemaining <= 0) {
+            el.innerHTML = '🔒 Sin búsquedas gratis hoy';
+            el.style.background = 'rgba(255,107,107,0.15)';
+            el.style.color = '#ff6b6b';
+        } else {
+            el.innerHTML = `🔍 ${searchRemaining} de ${searchLimit} búsquedas gratis hoy`;
+            el.style.background = 'rgba(108,92,231,0.15)';
+            el.style.color = '#6C5CE7';
+        }
+    });
+    // Disable search buttons if limit reached
+    document.querySelectorAll('.demo-btn, .search-btn').forEach(btn => {
+        if (searchRemaining <= 0) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
+    });
+}
+
+// Load usage on page load
+document.addEventListener('DOMContentLoaded', loadUsage);
+
 // =================== DEMO ===================
 async function runDemo() {
     const rubro = document.getElementById('demo-rubro').value.trim();
@@ -18,6 +59,27 @@ async function runDemo() {
             body: JSON.stringify({ rubro, ciudad, max: 5 })
         });
         const data = await res.json();
+
+        // Handle rate limit
+        if (data.error === 'limit_reached') {
+            results.innerHTML = `
+                <div style="text-align:center;padding:40px 24px;background:rgba(255,107,107,0.08);border-radius:12px;border:1px solid rgba(255,107,107,0.2);">
+                    <div style="font-size:2.5rem;margin-bottom:16px;">🔒</div>
+                    <h3 style="color:#ff6b6b;margin-bottom:8px;">Límite免费 alcanzado</h3>
+                    <p style="color:var(--text-muted);margin-bottom:20px;">Hoy ya hiciste las ${data.limit} búsquedas gratis. Mañana tenés ${data.limit} más.</p>
+                    <p style="color:var(--text-muted);margin-bottom:24px;">¿Necesitás más? Upgrade y buscá leads ilimitados.</p>
+                    <a href="#pricing" class="btn btn-primary" style="font-size:1rem;padding:12px 32px;">Ver planes y precios →</a>
+                </div>
+            `;
+            return;
+        }
+
+        if (data.usage) {
+            searchUsed = data.usage.used;
+            searchRemaining = data.usage.remaining;
+            searchLimit = data.usage.limit;
+            updateUsageUI();
+        }
 
         if (data.setupRequired) {
             results.innerHTML = `
