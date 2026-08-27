@@ -195,33 +195,34 @@ app.post('/api/checkout', async (req, res) => {
     // If MercadoPago is configured
     if (MP_ACCESS_TOKEN && planData.id) {
         try {
-            const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
+            const baseUrl = `${req.protocol}://${req.get('host')}`;
+            const mpRes = await fetch('https://api.mercadopago.com/preapproval', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    items: [{
-                        id: plan,
-                        title: `LeadHunter ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
-                        quantity: 1,
-                        unit_price: planData.price,
+                    reason: `LeadHunter ${plan.charAt(0).toUpperCase() + plan.slice(1)} (${billing})`,
+                    auto_recurring: {
+                        frequency: billing === 'anual' ? 12 : 1,
+                        frequency_type: 'months',
+                        transaction_amount: planData.price,
                         currency_id: 'ARS'
-                    }],
-                    payer: { email: '' },
-                    back_urls: {
-                        success: `${req.protocol}://${req.get('host')}/exito`,
-                        failure: `${req.protocol}://${req.get('host')}/error`,
-                        pending: `${req.protocol}://${req.get('host')}/pendiente`
                     },
-                    auto_return: 'approved',
-                    notification_url: `${req.protocol}://${req.get('host')}/api/webhook`
+                    payer_email: '',
+                    back_url: `${baseUrl}/exito?plan=${plan}`,
+                    notification_url: `${baseUrl}/api/webhook`
                 })
             });
 
             const data = await mpRes.json();
-            res.json({ init_point: data.init_point || data.sandbox_init_point });
+            if (data.init_point) {
+                res.json({ init_point: data.init_point });
+            } else {
+                console.error('MP preapproval error:', data);
+                res.json({ error: data.message || 'Error al crear suscripción' });
+            }
         } catch (err) {
             res.json({ error: err.message });
         }
@@ -236,7 +237,9 @@ app.post('/api/checkout', async (req, res) => {
 // =================== WEBHOOK (MercadoPago) ===================
 app.post('/api/webhook', async (req, res) => {
     const { type, data } = req.body;
+    console.log('📩 Webhook received:', type, data?.id);
 
+    // Handle subscription payments
     if (type === 'payment' && data?.id) {
         try {
             const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
@@ -248,16 +251,48 @@ app.post('/api/webhook', async (req, res) => {
                 const subs = JSON.parse(fs.readFileSync(SUBSCRIPTIONS, 'utf8'));
                 subs.push({
                     email: payment.payer?.email || '',
-                    plan: payment.metadata?.plan || 'unknown',
-                    billing: payment.metadata?.billing || 'mensual',
+                    plan: payment.description || 'unknown',
                     status: 'active',
                     paymentId: payment.id,
+                    amount: payment.transaction_amount,
                     createdAt: new Date().toISOString()
                 });
                 fs.writeFileSync(SUBSCRIPTIONS, JSON.stringify(subs, null, 2));
+                console.log('✅ Subscription saved:', payment.payer?.email);
             }
         } catch (err) {
-            console.error('Webhook error:', err.message);
+            console.error('Webhook payment error:', err.message);
+        }
+    }
+
+    // Handle subscription status changes
+    if (type === 'subscription_preapproval' && data?.id) {
+        try {
+            const mpRes = await fetch(`https://api.mercadopago.com/preapproval/${data.id}`, {
+                headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+            });
+            const preapproval = await mpRes.json();
+            console.log('📋 Preapproval status:', preapproval.status, preapproval.payer_email);
+
+            if (preapproval.status === 'authorized') {
+                const subs = JSON.parse(fs.readFileSync(SUBSCRIPTIONS, 'utf8'));
+                const existing = subs.find(s => s.preapprovalId === data.id);
+                if (existing) {
+                    existing.status = 'active';
+                } else {
+                    subs.push({
+                        email: preapproval.payer_email || '',
+                        plan: preapproval.reason || 'unknown',
+                        preapprovalId: data.id,
+                        status: 'active',
+                        amount: preapproval.auto_recurring?.transaction_amount,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                fs.writeFileSync(SUBSCRIPTIONS, JSON.stringify(subs, null, 2));
+            }
+        } catch (err) {
+            console.error('Webhook preapproval error:', err.message);
         }
     }
 

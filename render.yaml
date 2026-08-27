@@ -10,8 +10,24 @@ services:
       - key: NODE_ENV
         value: production
       - key: MP_ACCESS_TOKEN
-        sync: false
+        value: APP_USR-1467009383387182-081616-fc4217c8b0abf1a912da5b09387547b6-83108666
+      - key: MP_PUBLIC_KEY
+        value: APP_USR-e1cd60b2-5d07-4540-940b-e67ae8ea2dd5
+      - key: MP_CLIENT_SECRET
+        value: dZaWuJaYio2boAj3ub01xwHPbMiUNOu0
+      - key: MP_APP_ID
+        value: "1467009383387182"
       - key: MP_BASICO_MENSUAL
-        sync: false
+        value: b2c9130a02b34f83ae88f789d836332e
+      - key: MP_BASICO_ANUAL
+        value: 453ddce81e9f41c9a107bc2e4ca9b9ae
       - key: MP_PRO_MENSUAL
+        value: a94553dd27ee464ab8d06c0bae149741
+      - key: MP_PRO_ANUAL
+        value: 02f71b8b5a354c549fc8eaf050c237b7
+      - key: MP_ENTERPRISE_MENSUAL
         sync: false
+      - key: MP_ENTERPRISE_ANUAL
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        value: AIzaSyDUWXlg8rWp3h6oECHytN17c3cVVn_VGvA
