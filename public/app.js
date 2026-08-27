@@ -1,6 +1,13 @@
 // LeadHunter — Frontend JS
 const API = '';
 
+// =================== META PIXEL EVENTS ===================
+function trackPixel(event, params = {}) {
+    if (typeof fbq === 'function') {
+        fbq('track', event, params);
+    }
+}
+
 // =================== USAGE TRACKER ===================
 let searchUsed = 0;
 let searchLimit = 3;
@@ -117,6 +124,9 @@ async function runDemo() {
                 <a href="#pricing" class="btn btn-primary" style="font-size:0.9rem;padding:10px 24px;">Empezar a buscar leads →</a>
             </div>
         `;
+
+        // Meta Pixel: Lead (alguien usó la demo y vio resultados)
+        trackPixel('Lead', { content_name: rubro + ' - ' + ciudad, value: 0 });
     } catch (err) {
         results.innerHTML = '<p style="text-align:center;color:#ff6b6b;padding:32px;">Error al buscar leads. Intentá de nuevo.</p>';
     }
@@ -218,6 +228,14 @@ async function processCheckout() {
     btn.textContent = '⏳ Procesando...';
 
     try {
+        // Meta Pixel: InitiateCheckout ( click en pagar)
+        trackPixel('InitiateCheckout', {
+            content_name: pendingPlan,
+            content_category: pendingBilling,
+            value: pendingBilling === 'anual' ? (pendingPlan === 'basico' ? 3970 : pendingPlan === 'pro' ? 11900 : 23900) : (pendingPlan === 'basico' ? 4970 : pendingPlan === 'pro' ? 14900 : 29900),
+            currency: 'ARS'
+        });
+
         const res = await fetch(`${API}/api/checkout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -243,6 +261,8 @@ async function processCheckout() {
 
 // =================== CHECKOUT (wrapper) ===================
 function checkout(plan) {
+    // Meta Pixel: ViewContent (vio precios)
+    trackPixel('ViewContent', { content_name: 'pricing', content_category: plan });
     showEmailModal(plan);
 }
 
