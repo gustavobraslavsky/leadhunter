@@ -52,6 +52,11 @@
         .event-type.created { color: #6C5CE7; }
         .event-detail { color: var(--text-muted); }
 
+        .login-box { max-width: 400px; margin: 100px auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px; text-align: center; }
+        .login-box input { width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: white; font-size: 0.95rem; margin-bottom: 16px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--primary); color: white; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .login-box button:hover { opacity: 0.9; }
+
         @media (max-width: 768px) {
             .stats-row { grid-template-columns: repeat(2, 1fr); }
             table { font-size: 0.8rem; }
@@ -60,8 +65,17 @@
     </style>
 </head>
 <body>
-    <div class="admin">
-        <!-- Header -->
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-box">
+        <h2 style="margin-bottom:8px;">🔧 Admin Access</h2>
+        <p style="color:var(--text-muted);margin-bottom:24px;">Ingresá tu token de administrador</p>
+        <input type="password" id="admin-token-input" placeholder="Token de admin..." />
+        <button onclick="login()">Entrar</button>
+        <p id="login-error" style="color:#ff6b6b;margin-top:12px;display:none;"></p>
+    </div>
+
+    <!-- Admin Dashboard (hidden until login) -->
+    <div id="admin-dashboard" class="admin" style="display:none;">
         <div class="admin-header">
             <div>
                 <h1>🔧 Admin — LeadHunter</h1>
@@ -71,6 +85,7 @@
                 <a href="/">🏠 Landing</a>
                 <a href="/dashboard">📊 Dashboard</a>
                 <a href="/admin" class="active">🔧 Admin</a>
+                <a href="#" onclick="logout()" style="color:#ff6b6b;">Salir</a>
             </div>
         </div>
 
@@ -105,35 +120,94 @@
             </div>
         </div>
 
-        <!-- Email Notifications Config -->
+        <!-- Config -->
         <div class="section-card">
             <div class="section-header">
-                <h2>📧 Notificaciones por email</h2>
+                <h2>⚙️ Configuración</h2>
             </div>
             <div style="padding:24px;">
-                <p style="color:var(--text-muted);margin-bottom:16px;">Los emails se envían automáticamente cuando:</p>
-                <ul style="color:var(--text-muted);line-height:2;font-size:0.9rem;">
-                    <li>✅ Un usuario compra una suscripción</li>
-                    <li>✅ Un usuario cancela su suscripción</li>
-                    <li>✅ Se recibe un pago recurrente</li>
-                    <li>✅ Un pago falla (tarjeta rechazada)</li>
-                </ul>
-                <p style="color:var(--text-muted);margin-top:16px;font-size:0.85rem;">
-                    <strong>Nota:</strong> Para que los emails funcionen, configurá <code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">SMTP_HOST</code>, 
-                    <code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">SMTP_USER</code> y 
-                    <code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">SMTP_PASS</code> en las variables de entorno de Render.
-                </p>
+                <p style="color:var(--text-muted);margin-bottom:16px;"><strong>Variables de entorno requeridas en Render:</strong></p>
+                <div style="background:rgba(0,0,0,0.3);padding:16px;border-radius:8px;font-family:monospace;font-size:0.85rem;color:#A29BFE;line-height:1.8;">
+                    ADMIN_TOKEN=tu_token_secreto<br>
+                    SMTP_HOST=smtp.gmail.com<br>
+                    SMTP_PORT=587<br>
+                    SMTP_USER=tu@gmail.com<br>
+                    SMTP_PASS=contraseña_de_app<br>
+                    ADMIN_EMAIL=tu@gmail.com<br>
+                    GOOGLE_MAPS_API_KEY=AIza...<br>
+                    MP_ACCESS_TOKEN=APP_USR-...<br>
+                    MP_BASICO_MENSUAL=2c93...<br>
+                    MP_BASICO_ANUAL=2c93...<br>
+                    MP_PRO_MENSUAL=2c93...<br>
+                    MP_PRO_ANUAL=2c93...
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const API = '';
+        let ADMIN_TOKEN = localStorage.getItem('leadhunter_admin_token') || '';
+
+        async function apiFetch(url, options = {}) {
+            const sep = url.includes('?') ? '&' : '?';
+            return fetch(`${url}${sep}token=${ADMIN_TOKEN}`, {
+                ...options,
+                headers: { ...options.headers, 'X-Admin-Token': ADMIN_TOKEN }
+            });
+        }
+
+        function login() {
+            const token = document.getElementById('admin-token-input').value.trim();
+            if (!token) {
+                document.getElementById('login-error').textContent = 'Ingresá tu token';
+                document.getElementById('login-error').style.display = 'block';
+                return;
+            }
+            ADMIN_TOKEN = token;
+            localStorage.setItem('leadhunter_admin_token', token);
+
+            // Test token
+            apiFetch('/api/admin/status').then(res => res.json()).then(data => {
+                if (data.error) {
+                    document.getElementById('login-error').textContent = 'Token inválido';
+                    document.getElementById('login-error').style.display = 'block';
+                } else {
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('admin-dashboard').style.display = 'block';
+                    loadSubscribers();
+                    loadEvents();
+                }
+            }).catch(() => {
+                document.getElementById('login-error').textContent = 'Error de conexión';
+                document.getElementById('login-error').style.display = 'block';
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('leadhunter_admin_token');
+            ADMIN_TOKEN = '';
+            document.getElementById('login-screen').style.display = 'block';
+            document.getElementById('admin-dashboard').style.display = 'none';
+        }
+
+        // Auto-login if token exists
+        if (ADMIN_TOKEN) {
+            apiFetch('/api/admin/status').then(res => res.json()).then(data => {
+                if (!data.error) {
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('admin-dashboard').style.display = 'block';
+                    loadSubscribers();
+                    loadEvents();
+                }
+            }).catch(() => {});
+        }
 
         async function loadSubscribers() {
             try {
-                const res = await fetch(`${API}/api/admin/subscribers`);
+                const res = await apiFetch('/api/admin/subscribers');
                 const data = await res.json();
+
+                if (data.error) { logout(); return; }
 
                 document.getElementById('stat-total').textContent = data.total || 0;
                 document.getElementById('stat-active').textContent = data.active || 0;
@@ -168,7 +242,11 @@
                                 <tr>
                                     <td><strong>${s.email || 'Sin email'}</strong></td>
                                     <td><span class="badge badge-plan">${s.plan || '-'}</span></td>
-                                    <td><span class="badge badge-${s.status === 'active' ? 'active' : s.status === 'cancelled' ? 'cancelled' : 'paused'}">${s.status === 'active' ? '✅ Activo' : s.status === 'cancelled' ? '❌ Baja' : '⏸ Pausado'}</span></td>
+                                    <td><span class="badge badge-${s.status === 'active' ? 'active' : s.status === 'cancelled' ? 'cancelled' : s.status === 'pending' ? 'pending' : 'paused'}">${
+                                        s.status === 'active' ? '✅ Activo' :
+                                        s.status === 'cancelled' ? '❌ Baja' :
+                                        s.status === 'pending' ? '⏳ Pendiente' : '⏸ Pausado'
+                                    }</span></td>
                                     <td>$${(s.amount || 0).toLocaleString('es-AR')}</td>
                                     <td style="font-size:0.85rem;color:var(--text-muted);">${s.createdAt ? new Date(s.createdAt).toLocaleDateString('es-AR') : '-'}</td>
                                     <td style="font-size:0.85rem;color:var(--text-muted);">${s.lastPayment ? new Date(s.lastPayment).toLocaleDateString('es-AR') : '-'}</td>
@@ -185,8 +263,10 @@
 
         async function loadEvents() {
             try {
-                const res = await fetch(`${API}/api/admin/events`);
+                const res = await apiFetch('/api/admin/events');
                 const data = await res.json();
+
+                if (data.error) return;
 
                 if (!data.events || data.events.length === 0) {
                     document.getElementById('events-log').innerHTML = `
@@ -201,7 +281,14 @@
                 document.getElementById('events-log').innerHTML = data.events.reverse().map(e => `
                     <div class="event-item">
                         <span class="event-time">${new Date(e.timestamp).toLocaleString('es-AR')}</span>
-                        <span class="event-type ${e.type}">${e.type === 'approved' ? '✅ Pago' : e.type === 'cancelled' ? '❌ Baja' : e.type === 'created' ? '🆕 Nuevo' : e.type === 'paused' ? '⏸ Pausa' : '🔄 ' + e.type}</span>
+                        <span class="event-type ${e.type}">${
+                            e.type === 'approved' ? '✅ Pago' :
+                            e.type === 'cancelled' ? '❌ Baja' :
+                            e.type === 'created' ? '🆕 Nuevo' :
+                            e.type === 'paused' ? '⏸ Pausa' :
+                            e.type === 'rejected' ? '🚫 Rechazado' :
+                            '🔄 ' + e.type
+                        }</span>
                         <span class="event-detail">${e.email || ''} — ${e.plan || ''} — $${(e.amount || 0).toLocaleString('es-AR')}</span>
                     </div>
                 `).join('');
@@ -210,8 +297,10 @@
             }
         }
 
-        loadSubscribers();
-        loadEvents();
+        // Enter key login
+        document.getElementById('admin-token-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
     </script>
 </body>
 </html>

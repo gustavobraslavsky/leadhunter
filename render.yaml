@@ -9,6 +9,8 @@ services:
         value: 3003
       - key: NODE_ENV
         value: production
+      - key: ADMIN_TOKEN
+        sync: false
       - key: MP_ACCESS_TOKEN
         value: APP_USR-1467009383387182-081616-fc4217c8b0abf1a912da5b09387547b6-83108666
       - key: MP_PUBLIC_KEY
@@ -31,3 +33,13 @@ services:
         sync: false
       - key: GOOGLE_MAPS_API_KEY
         value: AIzaSyDUWXlg8rWp3h6oECHytN17c3cVVn_VGvA
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
