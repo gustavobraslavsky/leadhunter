@@ -15,6 +15,34 @@ try {
 const app = express();
 const PORT = process.env.PORT || 3003;
 
+// Email config (optional)
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
+
+async function sendEmail(to, subject, html) {
+    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+        console.log(`📧 [EMAIL DISABLED] To: ${to} | Subject: ${subject}`);
+        return false;
+    }
+    try {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+            host: SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || '587'),
+            secure: SMTP_HOST.includes('465'),
+            auth: { user: SMTP_USER, pass: SMTP_PASS }
+        });
+        await transporter.sendMail({ from: SMTP_USER, to, subject, html });
+        console.log(`📧 Email sent to ${to}: ${subject}`);
+        return true;
+    } catch (err) {
+        console.error('📧 Email error:', err.message);
+        return false;
+    }
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -99,6 +127,17 @@ if (!fs.existsSync(ALL_LEADS)) fs.writeFileSync(ALL_LEADS, '[]');
 if (!fs.existsSync(SUBSCRIPTIONS)) fs.writeFileSync(SUBSCRIPTIONS, '[]');
 
 // =================== ADMIN: API KEY CONFIG ===================
+const EVENTS_FILE = path.join(DB_DIR, 'events.json');
+if (!fs.existsSync(EVENTS_FILE)) fs.writeFileSync(EVENTS_FILE, '[]');
+
+function logEvent(type, email, plan, amount) {
+    try {
+        const events = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf8'));
+        events.push({ type, email, plan, amount, timestamp: new Date().toISOString() });
+        fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2));
+    } catch (e) {}
+}
+
 const API_KEY_FILE = path.join(DB_DIR, 'api-key.json');
 
 // Helper: get API key from env or file
@@ -138,6 +177,52 @@ app.get('/api/admin/status', (req, res) => {
         uptime: process.uptime()
     });
 });
+
+// =================== ADMIN: SUBSCRIBERS ===================
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/api/admin/subscribers', (req, res) => {
+    try {
+        const subs = JSON.parse(fs.readFileSync(SUBSCRIPTIONS, 'utf8'));
+        const active = subs.filter(s => s.status === 'active');
+        const cancelled = subs.filter(s => s.status === 'cancelled' || s.status === 'paused');
+        const totalRevenue = subs.reduce((sum, s) => sum + (s.amount || 0), 0);
+        const mrr = active.reduce((sum, s) => sum + (s.amount || 0), 0);
+
+        res.json({
+            subscribers: subs,
+            total: subs.length,
+            active: active.length,
+            cancelled: cancelled.length,
+            totalRevenue,
+            mrr
+        });
+    } catch (e) {
+        res.json({ subscribers: [], total: 0, active: 0, cancelled: 0, totalRevenue: 0, mrr: 0 });
+    }
+});
+
+app.get('/api/admin/events', (req, res) => {
+    try {
+        const events = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf8'));
+        res.json({ events });
+    } catch (e) {
+        res.json({ events: [] });
+    }
+});
+
+// =================== SUBSCRIPTION CHECK ===================
+function hasActiveSubscription(email) {
+    if (!email) return false;
+    try {
+        const subs = JSON.parse(fs.readFileSync(SUBSCRIPTIONS, 'utf8'));
+        return subs.some(s => s.email === email && s.status === 'active');
+    } catch (e) {
+        return false;
+    }
+}
 
 // =================== USAGE ENDPOINT ===================
 app.get('/api/usage', (req, res) => {
@@ -249,16 +334,38 @@ app.post('/api/webhook', async (req, res) => {
 
             if (payment.status === 'approved') {
                 const subs = JSON.parse(fs.readFileSync(SUBSCRIPTIONS, 'utf8'));
-                subs.push({
-                    email: payment.payer?.email || '',
-                    plan: payment.description || 'unknown',
-                    status: 'active',
-                    paymentId: payment.id,
-                    amount: payment.transaction_amount,
-                    createdAt: new Date().toISOString()
-                });
+                const existing = subs.find(s => s.preapprovalId === payment.preapproval_id);
+                if (existing) {
+                    existing.lastPayment = new Date().toISOString();
+                    existing.paymentCount = (existing.paymentCount || 0) + 1;
+                } else {
+                    subs.push({
+                        email: payment.payer?.email || '',
+                        plan: payment.description || 'unknown',
+                        preapprovalId: payment.preapproval_id || '',
+                        status: 'active',
+                        paymentId: payment.id,
+                        amount: payment.transaction_amount,
+                        createdAt: new Date().toISOString(),
+                        lastPayment: new Date().toISOString(),
+                        paymentCount: 1
+                    });
+                }
                 fs.writeFileSync(SUBSCRIPTIONS, JSON.stringify(subs, null, 2));
-                console.log('✅ Subscription saved:', payment.payer?.email);
+                logEvent('approved', payment.payer?.email, payment.description, payment.transaction_amount);
+                console.log('✅ Payment approved:', payment.payer?.email);
+
+                // Email notification to admin
+                if (ADMIN_EMAIL) {
+                    sendEmail(ADMIN_EMAIL, '💰 Nuevo pago LeadHunter',
+                        `<h2>Nuevo pago aprobado</h2><p><b>Email:</b> ${payment.payer?.email}</p><p><b>Monto:</b> $${payment.transaction_amount}</p><p><b>Plan:</b> ${payment.description}</p>`);
+                }
+            } else if (payment.status === 'rejected') {
+                logEvent('rejected', payment.payer?.email, payment.description, payment.transaction_amount);
+                if (ADMIN_EMAIL) {
+                    sendEmail(ADMIN_EMAIL, '❌ Pago rechazado LeadHunter',
+                        `<h2>Pago rechazado</h2><p><b>Email:</b> ${payment.payer?.email}</p><p><b>Monto:</b> $${payment.transaction_amount}</p>`);
+                }
             }
         } catch (err) {
             console.error('Webhook payment error:', err.message);
@@ -274,9 +381,10 @@ app.post('/api/webhook', async (req, res) => {
             const preapproval = await mpRes.json();
             console.log('📋 Preapproval status:', preapproval.status, preapproval.payer_email);
 
-            if (preapproval.status === 'authorized') {
-                const subs = JSON.parse(fs.readFileSync(SUBSCRIPTIONS, 'utf8'));
-                const existing = subs.find(s => s.preapprovalId === data.id);
+            const subs = JSON.parse(fs.readFileSync(SUBSCRIPTIONS, 'utf8'));
+            const existing = subs.find(s => s.preapprovalId === data.id);
+
+            if (preapproval.status === 'authorized' || preapproval.status === 'active') {
                 if (existing) {
                     existing.status = 'active';
                 } else {
@@ -289,14 +397,47 @@ app.post('/api/webhook', async (req, res) => {
                         createdAt: new Date().toISOString()
                     });
                 }
-                fs.writeFileSync(SUBSCRIPTIONS, JSON.stringify(subs, null, 2));
+                logEvent('approved', preapproval.payer_email, preapproval.reason, preapproval.auto_recurring?.transaction_amount);
+            } else if (preapproval.status === 'cancelled' || preapproval.status === 'ended') {
+                if (existing) {
+                    existing.status = 'cancelled';
+                    existing.cancelledAt = new Date().toISOString();
+                }
+                logEvent('cancelled', preapproval.payer_email, preapproval.reason, preapproval.auto_recurring?.transaction_amount);
+                console.log('❌ Subscription cancelled:', preapproval.payer_email);
+
+                // Email notification to admin
+                if (ADMIN_EMAIL) {
+                    sendEmail(ADMIN_EMAIL, '🔴 Baja de suscripción LeadHunter',
+                        `<h2>Suscripción cancelada</h2><p><b>Email:</b> ${preapproval.payer_email}</p><p><b>Plan:</b> ${preapproval.reason}</p><p><b>Motivo:</b> ${preapproval.status}</p>`);
+                }
+                // Email to user
+                if (preapproval.payer_email) {
+                    sendEmail(preapproval.payer_email, 'Tu suscripción LeadHunter fue cancelada',
+                        `<h2>Tu suscripción fue cancelada</h2><p>Tu acceso a LeadHunter ha sido desactivado.</p><p>Si creés que esto es un error, contactanos a hola@leadhunter.com.ar</p>`);
+                }
+            } else if (preapproval.status === 'paused') {
+                if (existing) {
+                    existing.status = 'paused';
+                }
+                logEvent('paused', preapproval.payer_email, preapproval.reason, preapproval.auto_recurring?.transaction_amount);
             }
+
+            fs.writeFileSync(SUBSCRIPTIONS, JSON.stringify(subs, null, 2));
         } catch (err) {
             console.error('Webhook preapproval error:', err.message);
         }
     }
 
     res.sendStatus(200);
+});
+
+// =================== USER SUBSCRIPTION CHECK ===================
+app.get('/api/subscription/check', (req, res) => {
+    const email = req.query.email;
+    if (!email) return res.json({ active: false, error: 'Email requerido' });
+    const active = hasActiveSubscription(email);
+    res.json({ active, email });
 });
 
 // =================== SEARCH ENDPOINT ===================
@@ -490,11 +631,16 @@ app.get('/setup', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'setup.html'));
 });
 app.get('/exito', (req, res) => {
+    const plan = req.query.plan || '';
     res.send(`
         <html><body style="font-family:sans-serif;text-align:center;padding:100px;background:#0F0F23;color:white;">
             <h1>🎉 ¡Pago aprobado!</h1>
             <p>Tu suscripción a LeadHunter está activa.</p>
+            <p style="color:#B2B2D0;">Plan: <strong>${plan}</strong></p>
             <p style="color:#B2B2D0;">En breve recibirás un email con tu acceso.</p>
+            <p style="color:#B2B2D0;margin-top:24px;">Podés empezar a usar LeadHunter ahora mismo:</p>
+            <a href="/dashboard" style="display:inline-block;margin-top:16px;padding:12px 32px;background:#6C5CE7;color:white;text-decoration:none;border-radius:8px;font-weight:600;">Ir al Dashboard →</a>
+            <br><br>
             <a href="/" style="color:#6C5CE7;">Volver al inicio</a>
         </body></html>
     `);
